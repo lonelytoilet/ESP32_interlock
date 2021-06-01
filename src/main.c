@@ -27,17 +27,17 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/index.
 #include <esp_task_wdt.h>
 //
 #define MQTT_BROKER_IP "192.168.1.229"
-//#define MQTT_BROKER_IP "192.168.1.198"
 #define MQTT_TOPIC "esp32"
 #define DOOR_OPEN "open"
 #define DOOR_SHUT "shut"
-//#define WIFI_SSID "ASUS"
-//#define WIFI_PASSWORD "SeanTMD@1"
 #define WIFI_SSID "ATTrhJ4FWa"
 #define WIFI_PASSWORD "id%astyfg8e5"
+#define TAG "ESP32_MQTT_CLIENT"
+//#define WIFI_SSID "ASUS"
+//#define WIFI_PASSWORD "SeanTMD@1"
 //#define WIFI_SSID "dd-wrt"
 //#define WIFI_PASSWORD "interlock"
-#define TAG "ESP32_MQTT_CLIENT"
+//#define MQTT_BROKER_IP "192.168.1.198"
 //
 static xQueueHandle gpio_queue = NULL;
 TaskHandle_t xHandle = NULL;
@@ -134,25 +134,25 @@ void isr_handler(void* arg)
 }
 
 
-void isr_task (void* arg)
+void isr_task (void* client)
 {
     // isr task: the event to be triggered from interrupt.
     uint32_t io_num;
     while(1){ // due to freeRTOS, the task must be in a loop
-    if(xQueueReceive(gpio_queue, &io_num, portMAX_DELAY))
-    {
-        printf("ISR EVENT\n");
-        esp_task_wdt_reset(); 
-    }
+        if(xQueueReceive(gpio_queue, &io_num, portMAX_DELAY))
+        {
+            printf("ISR\n");
+            esp_mqtt_client_publish(client, MQTT_TOPIC, "ISR.", 0, 1, 1);
+        }
     }
 }
 
 
-void gpio_init(void)
+void gpio_initialize(void* client)
 {
     // initialize gpio for interrupt service routine handling
     gpio_queue = xQueueCreate(10, sizeof(uint32_t));  // create queue to handle isr
-    xTaskCreate(isr_task, "task", 2048, NULL, 10, &xHandle);  // create isr task
+    xTaskCreate(isr_task, "task", 2048, client, 10, &xHandle);  // create isr task
     ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_LEVEL2)); //install isr service to gpio
     ESP_ERROR_CHECK(gpio_isr_handler_add(GPIO_NUM_13, isr_handler, NULL)); // create an isr handler
     gpio_pad_select_gpio(GPIO_NUM_13);  // pad select for gpio?
@@ -166,21 +166,14 @@ void gpio_init(void)
 void app_main(void)
 {
     ESP_ERROR_CHECK(nvs_flash_init());
-    //wifi_init_sta();
-    //wifi_connect();
-    //esp_mqtt_client_handle_t client = mqtt_init();
-    gpio_init();
+    wifi_init_sta();
+    wifi_connect();
+    //mqtt_init();
+    esp_mqtt_client_handle_t client = mqtt_init();
+    gpio_initialize(client);
     
     while(1){
         vTaskDelay(1000 / portTICK_RATE_MS); // prevents the task watchdog from causing a system reboot...
             //...due to task watchdog timer timeout.
     }
-    /*
-    while (1){
-        esp_mqtt_client_publish(client, MQTT_TOPIC, DOOR_OPEN, 0, 1, 1);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-        esp_mqtt_client_publish(client, MQTT_TOPIC, DOOR_SHUT, 0, 1, 1);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-    */
 }
