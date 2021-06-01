@@ -44,9 +44,8 @@ TaskHandle_t xHandle = NULL;
 bool PANIC;
 /* TODO
 ==========================
-input/output setup -> MQTT
 set static IP in bootloader
-setup sleep mode for lower pwoer consumption & wake function
+setup sleep mode for lower power consumption & wake function
     ->interlock enabled function
 OLED battery life & mode display
 */
@@ -142,7 +141,7 @@ void isr_task (void* client)
         if(xQueueReceive(gpio_queue, &io_num, portMAX_DELAY))
         {
             printf("ISR\n");
-            esp_mqtt_client_publish(client, MQTT_TOPIC, "ISR.", 0, 1, 1);
+            esp_mqtt_client_publish(client, MQTT_TOPIC, "ISR", 0, 1, 1);
         }
     }
 }
@@ -168,7 +167,6 @@ void app_main(void)
     ESP_ERROR_CHECK(nvs_flash_init());
     wifi_init_sta();
     wifi_connect();
-    //mqtt_init();
     esp_mqtt_client_handle_t client = mqtt_init();
     gpio_initialize(client);
     
