@@ -39,11 +39,14 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/index.
 //#define WIFI_PASSWORD "id%astyfg8e5"
 #define TAG "ESP32_MQTT_CLIENT"
 #define MANAGE "manage_esp"
-#define SLEEP "sleep"
+#define SLEEP "enter_sleep"
 #define TRIP_SH1 "off" // command to open the shelly one
 #define WIFI_SSID "dd-wrt"
 #define WIFI_PASSWORD "interlock"
 #define MQTT_BROKER_IP "192.168.1.116"  //WPRG Raspberry PI IP
+#define OLED_SCL 15
+#define OLED_SDA 4
+#define OLED_RST 16
 //
 static xQueueHandle gpio_queue = NULL;
 TaskHandle_t xHandle = NULL;
@@ -51,13 +54,14 @@ bool PANIC;
 //
 /* TODO
 ==========================
-set static IP in bootloader
-setup sleep mode for lower power consumption & wake function
-    ->mqtt ISR for sleep modes
-        -> light sleep for STBY
-        -> deep sleep for extended S/D
+set static IP
 OLED battery charge display -> capacitive touch?
 ADC for battery reading
+    -> dump battery voltage reading into csv file on broker
+handle user input from mqtt subscribed topic for:
+    -> request battey voltage
+    -> enter deep sleep
+    -> enable/disable interrupt signal  gpio_intr_disable(GPIO_NUM_13);
 */
 
 
@@ -97,6 +101,24 @@ void wifi_connect (void)
     ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MIN_MODEM)); // set power saving mode for wifi
 }
 
+/*
+void user_input (void *arg)
+{   
+    printf("user_input\n");
+    int input;
+    input = (int) &arg;
+    printf("user input: %i\n", input);
+    if (input == )
+    {
+        printf("Entering deep sleep.\n");
+        esp_deep_sleep_start();
+    }
+    else
+    {
+        printf("Failed input...\n");
+    }   
+}
+*/
 
 static void mqtt_event_handler (void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
@@ -113,7 +135,9 @@ static void mqtt_event_handler (void *handler_args, esp_event_base_t base, int32
         printf("Client published.\n");
         break;
     case MQTT_EVENT_DATA:
-        printf("EVENT DATA!\n");
+        printf("RECEIVED DATA!\n");
+        printf("DATA UNHANDLED!\n");
+        //user_input(event_data);
         break;
     default:
         break;
