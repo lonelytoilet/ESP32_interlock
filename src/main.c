@@ -10,6 +10,7 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/index.
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <esp_wifi.h>
 #include <esp_wifi_types.h>
 #include <sdkconfig.h>
@@ -25,6 +26,9 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/index.
 #include <freertos/task.h>
 #include <freertos/queue.h>
 #include <esp_task_wdt.h>
+#include <esp_pm.h>
+#include <esp32/pm.h> 
+#include "esp_sleep.h"
 //
 #define MQTT_BROKER_IP "192.168.1.229"
 #define MQTT_TOPIC "esp32"
@@ -33,6 +37,8 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/index.
 #define WIFI_SSID "ATTrhJ4FWa"
 #define WIFI_PASSWORD "id%astyfg8e5"
 #define TAG "ESP32_MQTT_CLIENT"
+#define MANAGE "manage_esp"
+#define SLEEP "sleep"
 //#define WIFI_SSID "ASUS"
 //#define WIFI_PASSWORD "SeanTMD@1"
 //#define WIFI_SSID "dd-wrt"
@@ -46,8 +52,11 @@ bool PANIC;
 ==========================
 set static IP in bootloader
 setup sleep mode for lower power consumption & wake function
-    ->interlock enabled function
-OLED battery life & mode display
+    ->mqtt ISR for sleep modes
+        -> light sleep for STBY
+        -> deep sleep for extended S/D
+OLED battery charge display
+ADC for battery reading
 */
 
 
@@ -85,7 +94,7 @@ void wifi_connect (void)
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config)); // set wifi IAW configuration
     ESP_ERROR_CHECK(esp_wifi_start());
     ESP_ERROR_CHECK(esp_wifi_connect());
-    
+    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MIN_MODEM)); // set power save mode
 }
 
 
@@ -103,6 +112,19 @@ static void mqtt_event_handler (void *handler_args, esp_event_base_t base, int32
     case MQTT_EVENT_PUBLISHED:
         printf("Client published.\n");
         break;
+    case MQTT_EVENT_DATA:
+        printf("EVENT DATA!\n");
+        if (event_data == "sleep")
+        {
+            printf("SLEEP!\n");
+            // sleep function
+        }
+        else
+        {
+            break;
+        }
+        
+        break;
     default:
         break;
     }
@@ -115,12 +137,13 @@ esp_mqtt_client_handle_t mqtt_init (void)
     esp_mqtt_client_config_t mqtt_config = { //client config
         .host = MQTT_BROKER_IP,
     };
-    
+    vTaskDelay(10000 / portTICK_RATE_MS); // give wifi_connect time to establish a full connection
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_config); //initialize client
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL); // register mqtt event with mqtt handler
     ESP_ERROR_CHECK(esp_mqtt_client_start(client)); // starts the client
     esp_mqtt_client_publish(client, MQTT_TOPIC, "ESP32 Connected.", 0, 1, 1); // publishes to topic
-
+    int id = esp_mqtt_client_subscribe(client, MANAGE, 0);
+    printf("subscribe message ID: %i\n", id);
     return client;
 }
 
@@ -161,14 +184,27 @@ void gpio_initialize(void* client)
     ESP_ERROR_CHECK(gpio_intr_enable(GPIO_NUM_13));  // enable isr
 }
 
+/*
+void power_config()
+{
+    
+    esp_pm_config_esp32_t pm_conf = {
+        .light_sleep_enable = true,
+    };
+    
+    ESP_ERROR_CHECK(esp_pm_configure(&pm_conf));  // power management configuration
+    //dynamic frequency scaling enabled via esp-IDF Menuconfig
+    esp_sleep_enable_wifi_wakeup();
+}
+*/
 
 void app_main(void)
 {
-    ESP_ERROR_CHECK(nvs_flash_init());
-    wifi_init_sta();
-    wifi_connect();
-    esp_mqtt_client_handle_t client = mqtt_init();
-    gpio_initialize(client);
+    ESP_ERROR_CHECK(nvs_flash_init());  // non volatile storage init
+    wifi_init_sta();  // initialize wifi as station mode
+    wifi_connect();  // connect to pre-defined wifi AP (access point)
+    esp_mqtt_client_handle_t client = mqtt_init();  // initialize MQTT protocall
+    gpio_initialize(client);  // init general purpose input/output
     
     while(1){
         vTaskDelay(1000 / portTICK_RATE_MS); // prevents the task watchdog from causing a system reboot...
