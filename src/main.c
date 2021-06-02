@@ -30,20 +30,19 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/index.
 #include <esp32/pm.h> 
 #include "esp_sleep.h"
 //
-#define MQTT_BROKER_IP "192.168.1.229"
-#define MQTT_TOPIC "esp32"
+//#define MQTT_BROKER_IP "192.168.1.229"
+#define MQTT_TOPIC "shellies/shelly1-E8DB84D6DA26/relay/0/command"  //topic to send commands to SH1
 #define DOOR_OPEN "open"
 #define DOOR_SHUT "shut"
-#define WIFI_SSID "ATTrhJ4FWa"
-#define WIFI_PASSWORD "id%astyfg8e5"
+//#define WIFI_SSID "ATTrhJ4FWa"
+//#define WIFI_PASSWORD "id%astyfg8e5"
 #define TAG "ESP32_MQTT_CLIENT"
 #define MANAGE "manage_esp"
 #define SLEEP "sleep"
-//#define WIFI_SSID "ASUS"
-//#define WIFI_PASSWORD "SeanTMD@1"
-//#define WIFI_SSID "dd-wrt"
-//#define WIFI_PASSWORD "interlock"
-//#define MQTT_BROKER_IP "192.168.1.198"
+#define TRIP_SH1 "off" // command to open the shelly one
+#define WIFI_SSID "dd-wrt"
+#define WIFI_PASSWORD "interlock"
+#define MQTT_BROKER_IP "192.168.1.116"  //WPRG Raspberry PI IP
 //
 static xQueueHandle gpio_queue = NULL;
 TaskHandle_t xHandle = NULL;
@@ -69,7 +68,6 @@ void wifi_init_sta (void)
     ESP_ERROR_CHECK(esp_event_loop_create_default()); // creates an event loop?
     esp_netif_create_default_wifi_sta(); // create wifi station
     ESP_ERROR_CHECK(esp_wifi_init(&cfg)); // initialize wifi 
-    
 }
 
 
@@ -114,7 +112,7 @@ static void mqtt_event_handler (void *handler_args, esp_event_base_t base, int32
         break;
     case MQTT_EVENT_DATA:
         printf("EVENT DATA!\n");
-        if (event_data == "sleep")
+        /*if (event_data == "sleep")
         {
             printf("SLEEP!\n");
             // sleep function
@@ -123,7 +121,7 @@ static void mqtt_event_handler (void *handler_args, esp_event_base_t base, int32
         {
             break;
         }
-        
+        */
         break;
     default:
         break;
@@ -163,8 +161,8 @@ void isr_task (void* client)
     while(1){ // due to freeRTOS, the task must be in a loop
         if(xQueueReceive(gpio_queue, &io_num, portMAX_DELAY))
         {
-            printf("ISR\n");
-            esp_mqtt_client_publish(client, MQTT_TOPIC, "ISR", 0, 1, 1);
+            printf("ISR EVENT: Tripping Shelly1 relay!\n");
+            esp_mqtt_client_publish(client, MQTT_TOPIC, TRIP_SH1, 0, 1, 1);
         }
     }
 }
