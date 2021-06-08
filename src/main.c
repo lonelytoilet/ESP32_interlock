@@ -107,7 +107,7 @@ esp_mqtt_client_handle_t user_input (esp_mqtt_event_t **user_input)
     for(int val = 0; val <= char_count; ++val)
     {
         char command_char = (char)*data_p.data;  //data variable in event structure only holds one char at a time?!         
-        printf("Command val? %c\n", command_char);
+        printf("Command value %c\n", command_char);
     }
     esp_mqtt_client_handle_t client = data_p.client;
     return client;
@@ -134,7 +134,6 @@ static void mqtt_event_handler (void *handler_args, esp_event_base_t base, int32
         input_pointer = event_data;
         esp_mqtt_client_handle_t client = user_input(input_pointer);
         esp_mqtt_client_publish(client, MQTT_TOPIC, "ESP32 Recieved data!\n", 0, 1, 1); // publishes to topic
-        
         break;
     default:
         break;
@@ -186,7 +185,7 @@ void gpio_initialize(void* client)
     // initialize gpio for interrupt service routine handling
     gpio_queue = xQueueCreate(10, sizeof(uint32_t));  // create queue to handle isr
     xTaskCreate(isr_task, "xTaskCreate\n", 2048, client, 10, &xHandle);  // create isr task
-    ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_LOWMED)); //install isr service to gpio
+    ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_LOWMED)); // install isr service to gpio
     ESP_ERROR_CHECK(gpio_isr_handler_add(PIN_IN, isr_handler, NULL)); // create an isr handler
     gpio_pad_select_gpio(PIN_IN);  // pad select for gpio?
     ESP_ERROR_CHECK(gpio_set_direction(PIN_IN, GPIO_MODE_INPUT)); // set pin 13 as input
@@ -240,13 +239,11 @@ void initialize()
 }
 
 
-/*
-int intro_func()
+
+char intro_func()
 {
-    char _ssid[];   //    /o
-    _ssid = getchar();
+    
 }
-*/
 
 
 void app_main(void)
