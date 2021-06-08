@@ -29,18 +29,8 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/index.
 #include <esp_pm.h>
 #include <esp32/pm.h> 
 #include <esp_sleep.h>
+#include "SSID.h" // contains WIFI_SSID, WIFI_PASSWORD, MQTT_BROKER_IP, MQTT_TOPIC
 //
-
-#define WIFI_SSID "ATTrhJ4FWa"
-#define WIFI_PASSWORD "id%astyfg8e5"
-#define MQTT_BROKER_IP "192.168.1.229"
-#define MQTT_TOPIC "esp32"
-/*
-#define WIFI_SSID "dd-wrt"
-#define WIFI_PASSWORD "interlock"
-#define MQTT_BROKER_IP "192.168.1.116"  //WPRG Raspberry PI IP
-#define MQTT_TOPIC "shellies/shelly1-E8DB84D6DA26/relay/0/command"  //topic to send commands to SH1
-*/
 #define PIN_IN GPIO_NUM_25 //GPIO_NUM_13
 #define DOOR_OPEN "open"
 #define DOOR_SHUT "shut"
@@ -104,7 +94,6 @@ void wifi_connect (void)
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config)); // set wifi IAW configuration
     ESP_ERROR_CHECK(esp_wifi_start());
     ESP_ERROR_CHECK(esp_wifi_connect());
-    
 }
 
 
@@ -115,10 +104,6 @@ esp_mqtt_client_handle_t user_input (esp_mqtt_event_t **user_input)
     unsigned char char_count;  // can count character count, but can't access entier word due to library defining *data as onyl char.
     char_count = data_p.total_data_len; 
     printf("Word length: %i\n", char_count);
-    //
-    //char command_char = (char)*data_p.data;  //data variable in event structure only holds one char at a time?!         
-    //printf("Command val? %c\n", command_char);
-    //const char comp = 'c';
     for(int val = 0; val <= char_count; ++val)
     {
         char command_char = (char)*data_p.data;  //data variable in event structure only holds one char at a time?!         
@@ -191,7 +176,6 @@ void isr_task (void* client)
         {
             printf("ISR EVENT: Tripping Shelly1 relay!\n");
             esp_mqtt_client_publish(client, MQTT_TOPIC, TRIP_SH1, 0, 1, 1);
-            
         }
     }
 }
