@@ -46,6 +46,8 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/index.
 static xQueueHandle gpio_queue = NULL;
 TaskHandle_t xHandle = NULL;
 bool PANIC;
+char command[15];
+int i = 0;
 //
 /* TODO
 ==========================
@@ -97,20 +99,94 @@ void wifi_connect (void)
 }
 
 
-esp_mqtt_client_handle_t user_input (esp_mqtt_event_t **user_input)
+void enable_power_save()
+{
+    #if CONFIG_PM_ENABLE  // power saving mode configuration structure
+        esp_pm_config_esp32_t pm_conf = {
+        .max_freq_mhz = CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ,
+        .min_freq_mhz = CONFIG_ESP32_XTAL_FREQ,
+    #if CONFIG_FREERTOS_USE_TICKLESS_IDLE
+        .light_sleep_enable = true,
+    #endif
+    };
+    esp_pm_configure(&pm_conf);  // power management configuration
+    //dynamic frequency scaling enabled via esp-IDF Menuconfig
+    #endif
+    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MIN_MODEM)); // set power saving mode for wifi
+}
+
+
+void disable_power_save()
+{
+    #if CONFIG_PM_ENABLE  // power saving mode configuration structure
+        esp_pm_config_esp32_t pm_conf = {
+        .max_freq_mhz = CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ,
+        .min_freq_mhz = CONFIG_ESP32_XTAL_FREQ,
+    #if CONFIG_FREERTOS_USE_TICKLESS_IDLE
+        .light_sleep_enable = false,
+    #endif
+    };
+    esp_pm_configure(&pm_conf);  // power management configuration
+    //dynamic frequency scaling enabled via esp-IDF Menuconfig
+    #endif
+    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE)); // set power saving mode for wifi
+}
+
+
+void command_handler(esp_mqtt_client_handle_t client)
+{
+    if (strcmp(command, "power_start.") == 0)
+    {
+        enable_power_save();
+        printf("Enabled power saving.\n");
+        esp_mqtt_client_publish(client, MQTT_TOPIC, "Enabled power saving on esp ##s.\n", 0, 1, 1);
+    }
+    else if (strcmp(command, "power_stop.") == 0)
+    {
+        disable_power_save();
+        printf("Disabled power saving on esp ##.\n");
+        esp_mqtt_client_publish(client, MQTT_TOPIC, "Disabled power saving on esp ##.\n", 0, 1, 1);
+    }
+    else if (strcmp(command, "sleep.") == 0)
+    {
+        esp_mqtt_client_publish(client, MQTT_TOPIC, "Putting esp32 ## to sleep\n", 0, 1, 1);
+        printf("putting esp32 to sleep.\n");
+        esp_deep_sleep_start();
+    }
+    else if (strcmp(command, "ping.") == 0)
+    {
+        printf("Ping response from esp ##\n");
+        esp_mqtt_client_publish(client, MQTT_TOPIC, "esp32 ## has been pinged\n", 0, 1, 1);
+    }
+    else
+    {
+        printf("ERROR\n");
+        printf("COMMAND: %s", command);
+        esp_mqtt_client_publish(client, MQTT_TOPIC, "ERROR: enter a valid string\n", 0, 1, 1);
+    }
+    
+    for(int val = 0; val < 15; ++val)
+    {// clear command array
+        command[val] = 0;
+    }
+}
+
+
+void user_input (esp_mqtt_event_t **user_input)
 {   
+    char command_char = 0;
     esp_mqtt_event_t data_p;  //event type
     data_p = *(esp_mqtt_event_t *)user_input;  //dereference and typecast void pointer
-    unsigned char char_count;  // can count character count, but can't access entier word due to library defining *data as onyl char.
-    char_count = data_p.total_data_len; 
-    printf("Word length: %i\n", char_count);
-    for(int val = 0; val <= char_count; ++val)
-    {
-        char command_char = (char)*data_p.data;  //data variable in event structure only holds one char at a time?!         
-        printf("Command value %c\n", command_char);
-    }
+    command_char = (char)*data_p.data;  //data variable in event structure only holds one char at a time?!         
+    printf("esp32 recieved: %c\n", command_char);
     esp_mqtt_client_handle_t client = data_p.client;
-    return client;
+    command[i] = command_char;
+    ++i;
+    if (command_char == '.')
+    {
+        i = 0;
+        command_handler(client);
+    }
 }
 
 
@@ -129,11 +205,10 @@ static void mqtt_event_handler (void *handler_args, esp_event_base_t base, int32
         printf("Client published.\n");
         break;
     case MQTT_EVENT_DATA:
-        printf("RECEIVED DATA!\n");
+        printf("Received data.\n");
         esp_mqtt_event_t **input_pointer;
         input_pointer = event_data;
-        esp_mqtt_client_handle_t client = user_input(input_pointer);
-        esp_mqtt_client_publish(client, MQTT_TOPIC, "ESP32 Recieved data!\n", 0, 1, 1); // publishes to topic
+        user_input(input_pointer);
         break;
     default:
         break;
@@ -195,23 +270,6 @@ void gpio_initialize(void* client)
 }
 
 
-void init_power_save()
-{
-    #if CONFIG_PM_ENABLE  // power saving mode configuration structure
-        esp_pm_config_esp32_t pm_conf = {
-        .max_freq_mhz = CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ,
-        .min_freq_mhz = CONFIG_ESP32_XTAL_FREQ,
-    #if CONFIG_FREERTOS_USE_TICKLESS_IDLE
-        .light_sleep_enable = true,
-    #endif
-    };
-    esp_pm_configure(&pm_conf);  // power management configuration
-    //dynamic frequency scaling enabled via esp-IDF Menuconfig
-    #endif
-    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MIN_MODEM)); // set power saving mode for wifi
-}
-
-
 void nonvolatile_init()
 {
     // intialize non volatile storage and clear it if needed
@@ -236,13 +294,6 @@ void initialize()
     // this includes the effect on wifi latency and ISR speed
     esp_mqtt_client_handle_t client = mqtt_init();  // initialize MQTT protocall
     gpio_initialize(client);  // init general purpose input/output
-}
-
-
-
-char intro_func()
-{
-    
 }
 
 
