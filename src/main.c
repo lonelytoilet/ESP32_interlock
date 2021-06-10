@@ -86,7 +86,7 @@ void wifi_connect (void)
             },
         },
     };
-    //config settings for running the wifi
+    // config settings for running the wifi
     // set up and connect
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA)); // enables wifi as station
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config)); // set wifi IAW configuration
@@ -131,13 +131,13 @@ void disable_power_save()
 
 void command_handler(esp_mqtt_client_handle_t client)
 {
-    if (strcmp(command, "power_start.") == 0)
+    if (strcmp(command, "psave_start.") == 0)
     {
         enable_power_save();
         printf("Enabled power saving.\n");
         esp_mqtt_client_publish(client, MQTT_TOPIC, "Enabled power saving on esp ##.\n", 0, 1, 1);
     }
-    else if (strcmp(command, "power_stop.") == 0)
+    else if (strcmp(command, "psave_stop.") == 0)
     {
         disable_power_save();
         printf("Disabled power saving.\n");
@@ -154,10 +154,14 @@ void command_handler(esp_mqtt_client_handle_t client)
         printf("Ping request from broker\n");
         esp_mqtt_client_publish(client, MQTT_TOPIC, "esp32 ## has been pinged\n", 0, 1, 1);
     }
+    else if (strcmp(command, "ping_01.") == 0)
+    {
+        printf("Null function\n");
+    }
     else
     {
         printf("ERROR\n");
-        printf("COMMAND: %s", command);
+        printf("COMMAND: %s\n", command);
         esp_mqtt_client_publish(client, MQTT_TOPIC, "ERROR: enter a valid command.\n", 0, 1, 1);
     }
     
