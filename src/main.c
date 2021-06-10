@@ -38,7 +38,7 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/index.
 #define MANAGE "manage_esp"
 #define SLEEP "enter_sleep"
 #define TRIP_SH1 "off" // command to open the shelly one
-
+//
 #define OLED_SCL 15
 #define OLED_SDA 4
 #define OLED_RST 16
@@ -52,14 +52,10 @@ int i = 0;
 /* TODO
 ==========================
 set static IP
-use getchar to ask for wifi info
-OLED battery charge display -> capacitive touch?
-ADC for battery reading
-    -> dump battery voltage reading into csv file on broker
-handle user input from mqtt subscribed topic for:
-    -> request battey voltage
-    -> enter deep sleep
-    -> enable/disable interrupt signal  gpio_intr_disable(GPIO_NUM_13);
+ask for wifi info in terminal
+fix deep sleep reset
+get battery voltage
+enable OLED
 */
 
 
@@ -120,8 +116,8 @@ void disable_power_save()
 {
     #if CONFIG_PM_ENABLE  // power saving mode configuration structure
         esp_pm_config_esp32_t pm_conf = {
-        .max_freq_mhz = CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ,
-        .min_freq_mhz = CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ,
+        .max_freq_mhz = ESP_PM_CPU_FREQ_MAX,
+        .min_freq_mhz = ESP_PM_APB_FREQ_MAX,
     #if CONFIG_FREERTOS_USE_TICKLESS_IDLE
         .light_sleep_enable = false,
     #endif
@@ -289,8 +285,7 @@ void initialize()
     nonvolatile_init(); // initialize storage
     wifi_init_sta();  // initialize wifi as station mode
     wifi_connect();  // connect to pre-defined wifi AP (access point)
-    //init_power_save(); // intialize power saving modes
-    //NOTE: the effects of power saving are not noticable while the ESP32 is plugged in via usb
+    // NOTE: the effects of power saving are not noticable while the ESP32 is plugged in via usb
     // this includes the effect on wifi latency and ISR speed
     esp_mqtt_client_handle_t client = mqtt_init();  // initialize MQTT protocall
     gpio_initialize(client);  // init general purpose input/output
