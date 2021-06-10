@@ -121,7 +121,7 @@ void disable_power_save()
     #if CONFIG_PM_ENABLE  // power saving mode configuration structure
         esp_pm_config_esp32_t pm_conf = {
         .max_freq_mhz = CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ,
-        .min_freq_mhz = CONFIG_ESP32_XTAL_FREQ,
+        .min_freq_mhz = CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ,
     #if CONFIG_FREERTOS_USE_TICKLESS_IDLE
         .light_sleep_enable = false,
     #endif
@@ -139,12 +139,12 @@ void command_handler(esp_mqtt_client_handle_t client)
     {
         enable_power_save();
         printf("Enabled power saving.\n");
-        esp_mqtt_client_publish(client, MQTT_TOPIC, "Enabled power saving on esp ##s.\n", 0, 1, 1);
+        esp_mqtt_client_publish(client, MQTT_TOPIC, "Enabled power saving on esp ##.\n", 0, 1, 1);
     }
     else if (strcmp(command, "power_stop.") == 0)
     {
         disable_power_save();
-        printf("Disabled power saving on esp ##.\n");
+        printf("Disabled power saving.\n");
         esp_mqtt_client_publish(client, MQTT_TOPIC, "Disabled power saving on esp ##.\n", 0, 1, 1);
     }
     else if (strcmp(command, "sleep.") == 0)
@@ -155,14 +155,14 @@ void command_handler(esp_mqtt_client_handle_t client)
     }
     else if (strcmp(command, "ping.") == 0)
     {
-        printf("Ping response from esp ##\n");
+        printf("Ping request from broker\n");
         esp_mqtt_client_publish(client, MQTT_TOPIC, "esp32 ## has been pinged\n", 0, 1, 1);
     }
     else
     {
         printf("ERROR\n");
         printf("COMMAND: %s", command);
-        esp_mqtt_client_publish(client, MQTT_TOPIC, "ERROR: enter a valid string\n", 0, 1, 1);
+        esp_mqtt_client_publish(client, MQTT_TOPIC, "ERROR: enter a valid command.\n", 0, 1, 1);
     }
     
     for(int val = 0; val < 15; ++val)
@@ -248,7 +248,7 @@ void isr_task (void* client)
     while(1){ // due to freeRTOS, the task must be in a loop
         if(xQueueReceive(gpio_queue, &io_num, portMAX_DELAY))
         {
-            printf("ISR EVENT: Tripping Shelly1 relay!\n");
+            printf("ISR EVENT!\n");
             esp_mqtt_client_publish(client, MQTT_TOPIC, TRIP_SH1, 0, 1, 1);
         }
     }

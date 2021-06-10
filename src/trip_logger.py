@@ -29,7 +29,7 @@ def on_message(client, userdata, message):
 
 def subscribe_client():
     client = mqtt.Client('client')  # creates client for subscription
-    client.connect('192.168.1.116')  # connects client to broker
+    client.connect('192.168.1.229')  # connects client to broker
     client.loop_start()
     # client.subscribe("shellies/shelly1-E8DB84D6DA26/relay/0/command")  # subscribes to the message board (located in config.json)
     client.subscribe("esp32")
