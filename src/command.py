@@ -1,5 +1,6 @@
 import paho.mqtt.client as mqtt
 import time
+import sys
 
 
 def on_message(client, userdata, message):
@@ -11,12 +12,19 @@ while True:
     client = mqtt.Client("command-client")  # client made to create posts to message board
     client.connect('192.168.1.229')  # broker address
     command = input("enter command\n")
-    command = command + '.'
     if command == 'help':
-        print("options (no caps):\n")
-        print("power_stop, power_start (start or stop power saving)\n")
-        print("sleep (force the esp into a deep sleep)\n")
+        print("\noptions (no caps):")
+        print("power_stop, power_start (start or stop power saving)")
+        print("sleep (force the esp into a deep sleep)")
+        print("\tif power saving has been started at any point")
+        print("\tcommanding a deep sleep will cause the esp to restart")
+        print("\ttry again after reconnect.")
         print("ping\n")
+        continue
+    elif command == 'exit':
+        sys.exit()
+    command = command + '.'
+    
 
     for character in command:
         i = 0
