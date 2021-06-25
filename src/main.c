@@ -1,4 +1,5 @@
-/*ESP32 purpose:
+/*
+ESP32 purpose:
 connecting to a pre-establish wifi network
 establishing an MQTT client
 recognizing GPIO input from a single external switch
@@ -132,7 +133,7 @@ void disable_power_save(void)
     ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE)); // set power saving mode for wifi
 }
 
-
+/*
 void analog_init(void)
 {
     ESP_ERROR_CHECK(adc_digi_init());
@@ -168,37 +169,37 @@ int get_batt_volt(void)
     esp_wifi_connect();
     return raw_reading;
 }
-
+*/
 
 void command_handler(esp_mqtt_client_handle_t client)
 {
     if (strcmp(command, "psave_start") == 0)
     {
         enable_power_save();
-        printf("Enabled power saving on esp_2.\n");
-        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Enabled power saving  on esp_2.\n", 0, 1, 1);
+        printf("Enabled power saving on esp_1.\n");
+        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Enabled power saving  on esp_1.\n", 0, 1, 1);
     }
     else if (strcmp(command, "psave_stop") == 0)
     {
         disable_power_save();
-        printf("Disabled power saving on esp_2.\n");
-        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Disabled power saving  on esp_2.\n", 0, 1, 1);
+        printf("Disabled power saving on esp_1.\n");
+        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Disabled power saving  on esp_1.\n", 0, 1, 1);
     }
     else if (strcmp(command, "sleep") == 0)
     {
-        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Putting to sleep esp_2.\n", 0, 1, 1);
-        printf("putting to sleep esp_2.\n");
+        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Putting to sleep esp_1.\n", 0, 1, 1);
+        printf("putting to sleep esp_1.\n");
         esp_deep_sleep_start();
     }
     else if (strcmp(command, "ping") == 0)
     {
         printf("Ping request from broker\n");
-        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_2 has been pinged\n", 0, 1, 1);
+        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_1 has been pinged\n", 0, 1, 1);
     }
-    else if (strcmp(command, "ping_2") == 0)
+    else if (strcmp(command, "ping_1") == 0)
     {   
         printf("Ping request from broker\n");
-        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_2 has been pinged\n", 0, 1, 1);
+        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_1 has been pinged\n", 0, 1, 1);
     }
     else
     {
@@ -281,7 +282,7 @@ esp_mqtt_client_handle_t mqtt_init (void)
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_config); //initialize client
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client); // register mqtt event with mqtt handler
     ESP_ERROR_CHECK(esp_mqtt_client_start(client)); // starts the client
-    esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, ".esp_2 Connected.\n", 0, 1, 1); // publishes to topic
+    esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_1 Connected.\n", 0, 1, 1); // publishes to topic
     return client;
 }
 
@@ -335,7 +336,7 @@ void nonvolatile_init(void)
     ESP_ERROR_CHECK(status);
 }
 
-
+/*
 void i2c_init(void)
 {
     i2c_config_t cfg = {
@@ -344,26 +345,25 @@ void i2c_init(void)
         .sda_pullup_en = GPIO_PULLUP_ENABLE,
         .scl_io_num = GPIO_NUM_15,
         .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = I2C_APB_CLK_FREQ,
+        .master.clk_speed = 100000,
     };
-    ESP_ERROR_CHECK(i2c_param_config(I2C_MODE_MASTER, &cfg));
-    ESP_ERROR_CHECK(i2c_driver_install(I2C_MODE_MASTER, cfg.mode, 12, 12, 0));
+    ESP_ERROR_CHECK(i2c_param_config(0, &cfg));
+    ESP_ERROR_CHECK(i2c_driver_install(0, cfg.mode, 12, 12, 0));
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     ESP_ERROR_CHECK(i2c_master_start(cmd));
-    /*
-    uint8_t data = "test";
+    int address = 
+    uint8_t data = '1';
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, address, 1));
     ESP_ERROR_CHECK(i2c_master_write(cmd, &data, sizeof(data), 1));
     ESP_ERROR_CHECK(i2c_master_stop(cmd));
-    */
 }
+*/
 
 
 void initialize(void)
 {
     nonvolatile_init(); // initialize storage
-    printf("i2c_start\n");
     //i2c_init();
-    printf("i2c_init\n");
     wifi_init_sta();  // initialize wifi as station mode
     wifi_connect();  // connect to pre-defined wifi AP (access point)
     // NOTE: the effects of power saving are not noticable while the ESP32 is plugged in via usb

@@ -43,7 +43,6 @@ def on_message(client, userdata, message):
         print(data_dump)
         
 
-
 def subscribe():
         ip, command_topic_from, command_topic_to, trip_topic = get_config()
         client = mqtt.Client('client')  # creates client for subscription
