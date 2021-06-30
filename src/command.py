@@ -1,5 +1,6 @@
+#!/usr/bin/env python
+
 import paho.mqtt.client as mqtt
-import time
 import sys
 import json
 
@@ -19,21 +20,29 @@ def get_config():
 
 
 while True:
-    command = sys.argv[1]
+    if len(sys.argv) == 1:
+        print('\nAn argument must be provided.\nFor help, enter "python3 command.py help".\n')
+        sys.exit()
+    else:
+        command = sys.argv[1]
+    
     broker_ip, command_topic, trip_topic = get_config()
     client = mqtt.Client("Command-client")  # client made to create posts to message board
     client.connect(broker_ip)  # broker address
     
     if command == 'help':
-        print("\noptions\t-caps sensitive (no capitals in commands):")
-        print("psave_start OR psave_stop\t-start or stop power saving.")
+        print('\nEX: "python3 command.py [option]"')
+        print("\n=options=(no capitals in commands):\n")
+        print("psave_start\t-start power saving.")
+        print("psave_stop\t-stop power saving.\n")
         print("sleep\t-force the esp into a deep sleep.")
         print("\t-if power saving has been started at any point.")
         print("\t-commanding a deep sleep will cause the esp to restart.")
         print("\t-try again after reconnect.")
-        print("ping\t-ping all esps.\n")
-        print("ping_0#\t-ping a specific esp by number.\n")
-        print("force_open OR force_shut\t-force relays open or shut.\n")
+        print("\nping\t-ping all connected esps.")
+        print('ping_#\t-ping a specific esp by number. EX: "ping_1"\n')
+        print("force_open\t-force relays open.")
+        print("force_shut\t-force relays shut.\n")
         sys.exit()
     elif command == 'force_open':
         client.publish(trip_topic, 'off')

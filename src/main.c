@@ -116,7 +116,7 @@ void enable_power_save(void)
 }
 
 
-void disable_power_save(void)
+void disable_power_save(void) // get rid of conditional compilation
 {
     gpio_intr_enable(PIN_IN);
     #if CONFIG_PM_ENABLE  // power saving mode configuration structure
@@ -176,30 +176,30 @@ void command_handler(esp_mqtt_client_handle_t client)
     if (strcmp(command, "psave_start") == 0)
     {
         enable_power_save();
-        printf("Enabled power saving on esp_1.\n");
-        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Enabled power saving  on esp_1.\n", 0, 1, 1);
+        printf("Enabled power saving on esp_2.\n");
+        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Enabled power saving  on esp_2.\n", 0, 1, 1);
     }
     else if (strcmp(command, "psave_stop") == 0)
     {
         disable_power_save();
-        printf("Disabled power saving on esp_1.\n");
-        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Disabled power saving  on esp_1.\n", 0, 1, 1);
+        printf("Disabled power saving on esp_2.\n");
+        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Disabled power saving  on esp_2.\n", 0, 1, 1);
     }
     else if (strcmp(command, "sleep") == 0)
     {
-        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Putting to sleep esp_1.\n", 0, 1, 1);
-        printf("putting to sleep esp_1.\n");
+        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Putting to sleep esp_2.\n", 0, 1, 1);
+        printf("putting to sleep esp_2.\n");
         esp_deep_sleep_start();
     }
     else if (strcmp(command, "ping") == 0)
     {
         printf("Ping request from broker\n");
-        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_1 has been pinged\n", 0, 1, 1);
+        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_2 has been pinged\n", 0, 1, 1);
     }
-    else if (strcmp(command, "ping_1") == 0)
+    else if (strcmp(command, "ping_2") == 0)
     {   
         printf("Ping request from broker\n");
-        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_1 has been pinged\n", 0, 1, 1);
+        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_2 has been pinged\n", 0, 1, 1);
     }
     else
     {
@@ -282,7 +282,7 @@ esp_mqtt_client_handle_t mqtt_init (void)
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_config); //initialize client
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client); // register mqtt event with mqtt handler
     ESP_ERROR_CHECK(esp_mqtt_client_start(client)); // starts the client
-    esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_1 Connected.\n", 0, 1, 1); // publishes to topic
+    esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_2 Connected.\n", 0, 1, 1); // publishes to topic
     return client;
 }
 

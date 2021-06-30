@@ -1,7 +1,6 @@
 import paho.mqtt.client as mqtt
 import datetime
 import json
-import os
 from pathlib import Path
 
 
@@ -34,7 +33,7 @@ def on_message(client, userdata, message):
     with(open("log_conf.json", 'r')) as config:
         conf = json.load(config)
         log_path = conf['log_path']
-    log_file = Path(log_path) / log_file
+    # log_file = Path(log_path) / log_file
     with open(log_file, 'a') as file:
         data = str(message.payload.decode("utf-8"))
         current_time = datetime.datetime.now()
