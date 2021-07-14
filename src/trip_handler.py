@@ -1,37 +1,43 @@
-#!/usr/bin/env python
-
 import paho.mqtt.client as mqtt
 import json
+from pathlib import Path
 
-
-# receive a trip command and disseminate it to the appropriate relay topics
-
-def on_message(client, userdata, message):
-    # prints message received
-    print(type(message.payload.decode("utf-8")))
-    with(open("log_conf.json", 'r')) as config:
-        conf = json.load(config)
-        client.publish(conf['Relay_1'], 'off')
-        client.publish(conf['Relay_2'], 'off')
-        client.publish(conf['Relay_3'], 'off')
 
 def get_config():
     with(open("log_conf.json", 'r')) as config:
         conf = json.load(config)
-        broker_ip = conf['broker_ip']
-        command_topic = conf['command_topic_to']
+        broker_ip = str(conf['broker_ip'])
         trip_topic = conf['trip_topic']
-    return broker_ip, command_topic, trip_topic
+    return broker_ip, trip_topic
 
 
-while True:
-    broker_ip, command_topic, trip_topic = get_config()
-    client = mqtt.Client("Trip_handler")  # client made to create posts to message board
-    client.connect(broker_ip)  # broker address
-    client.loop_start()
-    client.subscribe(trip_topic)
-    
+def on_message(client, userdata, message):
+    with(open("log_conf.json", 'r')) as config:
+        conf = json.load(config)
+        data = str(message.payload.decode("utf-8"))
+        print(data)
+        if data == 'off':
+            val = 1
+            while val <= int(conf["number_of_relays"]):
+                topic_id = 'Relay_' + str(val)
+                client.publish(conf[topic_id], 'off')
+                val = val + 1
+        
+
+def subscribe():
+        ip, trip_topic = get_config()
+        client = mqtt.Client('client')  # creates client for subscription
+        client.connect(ip)  # connects client to broker
+        client.loop_start()
+        client.subscribe(trip_topic)
+        return client
 
 
-   
-    
+def main():
+        client_id = subscribe()
+        while True:
+                client_id.on_message = on_message
+                
+
+if __name__ == '__main__':
+        main()
