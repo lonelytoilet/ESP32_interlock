@@ -31,8 +31,8 @@ https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/index.
 #include <esp_pm.h>
 #include <esp32/pm.h> 
 #include <esp_sleep.h>
-#include <driver/adc.h>
 #include <driver/i2c.h>
+
 #include "settings.h" // contains WIFI_SSID, WIFI_PASSWORD, MQTT_BROKER_IP, MQTT_TOPIC
 //
 #define PIN_IN GPIO_NUM_25 //GPIO_NUM_13
@@ -55,10 +55,7 @@ int i = 0;
 //
 /* TODO
 ==========================
-set static IP
 ask for wifi info in terminal
-fix deep sleep reset
-get battery voltage
 enable OLED
 */
 
@@ -100,17 +97,14 @@ void wifi_connect (void)
 
 void enable_power_save(void)
 {
-    #if CONFIG_PM_ENABLE  // power saving mode configuration structure
+    // power saving mode configuration structure
         esp_pm_config_esp32_t pm_conf = {
         .max_freq_mhz = CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ,
         .min_freq_mhz = CONFIG_ESP32_XTAL_FREQ,
-    #if CONFIG_FREERTOS_USE_TICKLESS_IDLE
         .light_sleep_enable = true,
-    #endif
     };
     esp_pm_configure(&pm_conf);  // power management configuration
     //dynamic frequency scaling enabled via esp-IDF Menuconfig
-    #endif
     ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MIN_MODEM)); // set power saving mode for wifi
     gpio_intr_disable(PIN_IN);
 }
@@ -119,57 +113,17 @@ void enable_power_save(void)
 void disable_power_save(void) // get rid of conditional compilation
 {
     gpio_intr_enable(PIN_IN);
-    #if CONFIG_PM_ENABLE  // power saving mode configuration structure
+    // power saving mode configuration structure
         esp_pm_config_esp32_t pm_conf = {
         .max_freq_mhz = ESP_PM_CPU_FREQ_MAX,
         .min_freq_mhz = ESP_PM_APB_FREQ_MAX,
-    #if CONFIG_FREERTOS_USE_TICKLESS_IDLE
         .light_sleep_enable = false,
-    #endif
     };
     esp_pm_configure(&pm_conf);  // power management configuration
     //dynamic frequency scaling enabled via esp-IDF Menuconfig
-    #endif
     ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE)); // set power saving mode for wifi
 }
 
-/*
-void analog_init(void)
-{
-    ESP_ERROR_CHECK(adc_digi_init());
-    ESP_ERROR_CHECK(adc_gpio_init(ADC_UNIT_2, ADC2_CHANNEL_4));
-    ESP_ERROR_CHECK(adc2_config_channel_atten(ADC2_CHANNEL_4, ADC_ATTEN_DB_11));
-}
-
-
-int read_battvolt(void)
-{
-    int raw;
-
-    esp_err_t readout = adc2_get_raw(ADC2_CHANNEL_4, ADC_WIDTH_12Bit, &raw);
-    if (readout == ESP_OK)
-    {
-        printf("raw readout: %d\n", raw);
-    }
-    else if (readout == ESP_ERR_TIMEOUT)
-    {
-        printf("error");
-    }
-    return raw;
-}
-
-
-int get_batt_volt(void)
-{
-    esp_wifi_stop();
-    analog_init();
-    int raw_reading = read_battvolt();
-    adc_digi_deinit();
-    esp_wifi_start();
-    esp_wifi_connect();
-    return raw_reading;
-}
-*/
 
 void command_handler(esp_mqtt_client_handle_t client)
 {
@@ -303,7 +257,10 @@ void isr_task (void* client)
         if(xQueueReceive(gpio_queue, &io_num, portMAX_DELAY))
         {
             printf("ISR EVENT!\n");
-            esp_mqtt_client_publish(client, MQTT_TOPIC_TRIP, TRIP_SH1, 0, 1, 1);
+            // post to each topic resposible for tripping each shelly 1 relay
+            esp_mqtt_client_publish(client, MQTT_TOPIC_TRIP_1, TRIP_SH1, 0, 1, 1);
+            //esp_mqtt_client_publish(client, MQTT_TOPIC_TRIP_2, TRIP_SH1, 0, 1, 1);
+            //esp_mqtt_client_publish(client, MQTT_TOPIC_TRIP_3, TRIP_SH1, 0, 1, 1);
         }
     }
 }
@@ -316,7 +273,7 @@ void gpio_initialize(void* client)
     xTaskCreate(isr_task, "xTaskCreate\n", 2048, client, 10, &xHandle);  // create isr task
     ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_LOWMED)); // install isr service to gpio
     ESP_ERROR_CHECK(gpio_isr_handler_add(PIN_IN, isr_handler, NULL)); // create an isr handler
-    gpio_pad_select_gpio(PIN_IN);  // pad select for gpio?
+    gpio_pad_select_gpio(PIN_IN);  
     ESP_ERROR_CHECK(gpio_set_direction(PIN_IN, GPIO_MODE_INPUT)); // set pin 13 as input
     ESP_ERROR_CHECK(gpio_set_pull_mode(PIN_IN, GPIO_PULLUP_ONLY)); // enable pullup resistor in pin 13
     ESP_ERROR_CHECK(gpio_set_intr_type(PIN_IN, GPIO_INTR_LOW_LEVEL)); // negitive edge interrupt service routine
@@ -351,11 +308,14 @@ void i2c_init(void)
     ESP_ERROR_CHECK(i2c_driver_install(0, cfg.mode, 12, 12, 0));
     i2c_cmd_handle_t cmd = i2c_cmd_link_create();
     ESP_ERROR_CHECK(i2c_master_start(cmd));
-    int address = 
-    uint8_t data = '1';
+    int address = 0x3C;
+    uint8_t data = 0xA4;
     ESP_ERROR_CHECK(i2c_master_write_byte(cmd, address, 1));
-    ESP_ERROR_CHECK(i2c_master_write(cmd, &data, sizeof(data), 1));
+    ESP_ERROR_CHECK(i2c_master_write_byte(cmd, data, 1));
+    //ESP_ERROR_CHECK(i2c_master_write(cmd, &data, sizeof(data), 1));
     ESP_ERROR_CHECK(i2c_master_stop(cmd));
+    ESP_ERROR_CHECK(i2c_master_cmd_begin(0, cmd, 1000));
+    i2c_cmd_link_delete(cmd);
 }
 */
 
@@ -375,9 +335,8 @@ void initialize(void)
 
 void app_main(void)
 {
-    //wifi_ssid, wifi_passw = intro_func();
     initialize();
-    //
+    
     while(1){
         vTaskDelay(1500 / portTICK_RATE_MS); // prevents the task watchdog from causing a system reboot...
             //...due to task watchdog timer timeout.
