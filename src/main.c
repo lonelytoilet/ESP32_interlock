@@ -59,7 +59,7 @@ ask for wifi info in terminal
 enable OLED
 */
 
-void wifi_init_sta (void)
+void wifi_init_sta(void)
 {
     //setup the LwIP phase for station
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -71,7 +71,7 @@ void wifi_init_sta (void)
 }
 
 
-void wifi_connect (void)
+void wifi_connect(void)
 {
     //get the wifi running & connected
     //config settings to connect
@@ -95,65 +95,23 @@ void wifi_connect (void)
 }
 
 
-void enable_power_save(void)
-{
-    // power saving mode configuration structure
-        esp_pm_config_esp32_t pm_conf = {
-        .max_freq_mhz = CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ,
-        .min_freq_mhz = CONFIG_ESP32_XTAL_FREQ,
-        .light_sleep_enable = true,
-    };
-    esp_pm_configure(&pm_conf);  // power management configuration
-    //dynamic frequency scaling enabled via esp-IDF Menuconfig
-    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MIN_MODEM)); // set power saving mode for wifi
-    gpio_intr_disable(PIN_IN);
-}
-
-
-void disable_power_save(void) // get rid of conditional compilation
-{
-    gpio_intr_enable(PIN_IN);
-    // power saving mode configuration structure
-        esp_pm_config_esp32_t pm_conf = {
-        .max_freq_mhz = ESP_PM_CPU_FREQ_MAX,
-        .min_freq_mhz = ESP_PM_APB_FREQ_MAX,
-        .light_sleep_enable = false,
-    };
-    esp_pm_configure(&pm_conf);  // power management configuration
-    //dynamic frequency scaling enabled via esp-IDF Menuconfig
-    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE)); // set power saving mode for wifi
-}
-
-
 void command_handler(esp_mqtt_client_handle_t client)
 {
-    if (strcmp(command, "psave_start") == 0)
+    if (strcmp(command, "sleep") == 0)
     {
-        enable_power_save();
-        printf("Enabled power saving on esp_2.\n");
-        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Enabled power saving  on esp_2.\n", 0, 1, 1);
-    }
-    else if (strcmp(command, "psave_stop") == 0)
-    {
-        disable_power_save();
-        printf("Disabled power saving on esp_2.\n");
-        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Disabled power saving  on esp_2.\n", 0, 1, 1);
-    }
-    else if (strcmp(command, "sleep") == 0)
-    {
-        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Putting to sleep esp_2.\n", 0, 1, 1);
-        printf("putting to sleep esp_2.\n");
+        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "Putting to sleep esp_1.\n", 0, 1, 1);
+        printf("putting to sleep esp_1.\n");
         esp_deep_sleep_start();
     }
     else if (strcmp(command, "ping") == 0)
     {
         printf("Ping request from broker\n");
-        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_2 has been pinged\n", 0, 1, 1);
+        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_1 has been pinged\n", 0, 1, 1);
     }
-    else if (strcmp(command, "ping_2") == 0)
+    else if (strcmp(command, "ping_1") == 0)
     {   
         printf("Ping request from broker\n");
-        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_2 has been pinged\n", 0, 1, 1);
+        esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_1 has been pinged\n", 0, 1, 1);
     }
     else
     {
@@ -167,7 +125,7 @@ void command_handler(esp_mqtt_client_handle_t client)
 }
 
 
-void user_input (esp_mqtt_event_t **user_input)
+void user_input(esp_mqtt_event_t **user_input)
 {   
     char command_char = 0;
     esp_mqtt_event_t data_p;  //event type
@@ -195,7 +153,7 @@ void user_input (esp_mqtt_event_t **user_input)
 }
 
 
-static void mqtt_event_handler (void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
+static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
     //prints mqtt event to terminal, and NOT to the mqtt broker.
     switch ((esp_mqtt_event_id_t)event_id)
@@ -226,7 +184,7 @@ static void mqtt_event_handler (void *handler_args, esp_event_base_t base, int32
 }
 
 
-esp_mqtt_client_handle_t mqtt_init (void)
+esp_mqtt_client_handle_t mqtt_init(void)
 {
     // initialize mqtt client to the specified topic located at MQTT_BROKER_IP
     esp_mqtt_client_config_t mqtt_config = { //client config
@@ -236,7 +194,7 @@ esp_mqtt_client_handle_t mqtt_init (void)
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_config); //initialize client
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client); // register mqtt event with mqtt handler
     ESP_ERROR_CHECK(esp_mqtt_client_start(client)); // starts the client
-    esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_2 Connected.\n", 0, 1, 1); // publishes to topic
+    esp_mqtt_client_publish(client, MQTT_TOPIC_MANAGE_FROM, "esp_1 Connected.\n", 0, 1, 1); // publishes to topic
     return client;
 }
 
@@ -249,7 +207,7 @@ void isr_handler(void* arg)
 }
 
 
-void isr_task (void* client)
+void isr_task(void* client)
 {
     // isr task: the event to be triggered from interrupt.
     uint32_t io_num;
@@ -258,10 +216,10 @@ void isr_task (void* client)
         {
             printf("ISR EVENT!\n");
             // post to each topic resposible for tripping each shelly 1 relay
-            esp_mqtt_client_publish(client, MQTT_TOPIC_TRIP_1, TRIP_SH1, 0, 1, 1);
-            //esp_mqtt_client_publish(client, MQTT_TOPIC_TRIP_2, TRIP_SH1, 0, 1, 1);
-            //esp_mqtt_client_publish(client, MQTT_TOPIC_TRIP_3, TRIP_SH1, 0, 1, 1);
+            esp_mqtt_client_publish(client, MQTT_TOPIC_TRIP, TRIP_SH1, 0, 1, 0);
         }
+        vTaskDelay(500 / portTICK_RATE_MS);
+        xQueueReset(gpio_queue);  // flushes the freeROTS task queue of all noisy ISRs
     }
 }
 
@@ -276,7 +234,7 @@ void gpio_initialize(void* client)
     gpio_pad_select_gpio(PIN_IN);  
     ESP_ERROR_CHECK(gpio_set_direction(PIN_IN, GPIO_MODE_INPUT)); // set pin 13 as input
     ESP_ERROR_CHECK(gpio_set_pull_mode(PIN_IN, GPIO_PULLUP_ONLY)); // enable pullup resistor in pin 13
-    ESP_ERROR_CHECK(gpio_set_intr_type(PIN_IN, GPIO_INTR_LOW_LEVEL)); // negitive edge interrupt service routine
+    ESP_ERROR_CHECK(gpio_set_intr_type(PIN_IN, GPIO_INTR_POSEDGE)); // negitive edge interrupt service routine
     ESP_ERROR_CHECK(gpio_intr_enable(PIN_IN));  // enable isr
 }
 
@@ -322,6 +280,7 @@ void i2c_init(void)
 
 void initialize(void)
 {
+    // make sure interrupt watchdog is disabled in menuconfig
     nonvolatile_init(); // initialize storage
     //i2c_init();
     wifi_init_sta();  // initialize wifi as station mode
