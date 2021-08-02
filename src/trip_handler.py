@@ -40,5 +40,14 @@ def main():
                 client.on_message = on_message
                 
 
-if __name__ == '__main__':
+def attempt_connection():
+    try:    
         main()
+    except OSError:
+        minutes = 2*60
+        time.sleep(minutes)
+        attempt_connection()
+
+
+if __name__ == '__main__':
+    attempt_connection()
